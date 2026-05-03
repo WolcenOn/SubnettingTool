@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VLSM Pro — Calculadora de Subredes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@300;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #070d1a;
+    --surface:  #0d1629;
+    --panel:    #111e36;
+    --border:   #1e3357;
+    --cyan:     #00e5ff;
+    --green:    #00ffa3;
+    --yellow:   #ffd600;
+    --red:      #ff4f5e;
+    --text:     #c8d8f0;
+    --dim:      #5a7499;
+    --mono:     'Space Mono', monospace;
+    --display:  'Barlow Condensed', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--mono);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0 0 80px;
+    overflow-x: hidden;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    background: linear-gradient(180deg, #0a1930 0%, var(--bg) 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 24px 40px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -60px;
+    width: 320px; height: 320px;
+    background: radial-gradient(circle, rgba(0,229,255,.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .header-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .logo-icon {
+    width: 46px; height: 46px;
+    background: linear-gradient(135deg, var(--cyan), var(--green));
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+  }
+  .header-title h1 {
+    font-family: var(--display);
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: .5px;
+    line-height: 1;
+  }
+  .header-title p {
+    font-family: var(--display);
+    font-size: .85rem;
+    color: var(--dim);
+    font-weight: 300;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+  .badge {
+    margin-left: auto;
+    background: rgba(0,229,255,.12);
+    border: 1px solid rgba(0,229,255,.3);
+    color: var(--cyan);
+    font-size: .7rem;
+    padding: 5px 12px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-family: var(--display);
+    font-weight: 500;
+  }
+
+  /* ─── LAYOUT ─── */
+  .main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 28px 20px;
+  }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 880px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    header { padding: 18px 20px 16px; }
+    .badge { display: none; }
+  }
+
+  /* ─── PANEL / CARD ─── */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .panel-header {
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .panel-header .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+  .dot-cyan  { background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
+  .dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dot-yellow{ background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+  .panel-header h3 {
+    font-family: var(--display);
+    font-size: .95rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .panel-body { padding: 20px; }
+
+  /* ─── FORM ─── */
+  .field { margin-bottom: 16px; }
+  label {
+    display: block;
+    font-size: .72rem;
+    color: var(--dim);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  input[type="text"], input[type="number"] {
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--cyan);
+    font-family: var(--mono);
+    font-size: .9rem;
+    padding: 10px 14px;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  input:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 3px rgba(0,229,255,.1);
+  }
+  .field-row { display: grid; grid-template-columns: 1fr 90px; gap: 10px; }
+
+  /* ─── SUBNET ROWS ─── */
+  #subnets-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+  .subnet-row {
+    display: grid;
+    grid-template-columns: 1fr 80px 34px;
+    gap: 8px;
+    align-items: center;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    transition: border-color .2s;
+    animation: slideIn .3s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .subnet-row:hover { border-color: var(--dim); }
+  .subnet-row input {
+    background: transparent;
+    border: none;
+    padding: 4px 6px;
+    font-size: .85rem;
+  }
+  .subnet-row input:focus { box-shadow: none; border-color: transparent; border-bottom: 1px solid var(--cyan); border-radius: 0; }
+  .subnet-row input[type="number"] { color: var(--green); text-align: right; }
+  .row-label {
+    font-size: .65rem;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 2px;
+  }
+  .del-btn {
+    background: none;
+    border: 1px solid #2a3f5f;
+    color: var(--dim);
+    width: 30px; height: 30px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    display: grid;
+    place-items: center;
+    transition: .2s;
+  }
+  .del-btn:hover { background: rgba(255,79,94,.15); border-color: var(--red); color: var(--red); }
+
+  /* ─── BUTTONS ─── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: .95rem;
+    letter-spacing: .5px;
+    padding: 11px 18px;
+    transition: .2s;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--cyan), #0099bb);
+    color: #000;
+    width: 100%;
+    font-size: 1rem;
+    padding: 13px;
+    margin-top: 4px;
+  }
+  .btn-primary:hover { filter: brightness(1.15); transform: translateY(-1px); }
+  .btn-add {
+    background: rgba(0,255,163,.1);
+    border: 1px solid rgba(0,255,163,.3);
+    color: var(--green);
+    width: 100%;
+  }
+  .btn-add:hover { background: rgba(0,255,163,.18); }
+  .btn-export {
+    background: rgba(255,214,0,.1);
+    border: 1px solid rgba(255,214,0,.3);
+    color: var(--yellow);
+    font-size: .8rem;
+    padding: 7px 14px;
+  }
+  .btn-export:hover { background: rgba(255,214,0,.18); }
+  .btn-copy {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--dim);
+    font-size: .7rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: var(--mono);
+    transition: .15s;
+  }
+  .btn-copy:hover { border-color: var(--cyan); color: var(--cyan); }
+  .btn-copy.copied { border-color: var(--green); color: var(--green); }
+
+  /* ─── RESULTS RIGHT PANEL ─── */
+  .right-col { display: flex; flex-direction: column; gap: 20px; }
+
+  /* ─── STATS ROW ─── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  @media (max-width: 600px) { .stats-row { grid-template-columns: 1fr 1fr; } }
+  .stat-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+    transition: border-color .2s;
+  }
+  .stat-box:hover { border-color: var(--cyan); }
+  .stat-val {
+    font-family: var(--display);
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: var(--cyan);
+    line-height: 1;
+  }
+  .stat-lbl {
+    font-size: .65rem;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-top: 4px;
+  }
+
+  /* ─── VISUAL MAP ─── */
+  .space-map { margin: 0; }
+  .space-track {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    height: 36px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .space-seg {
+    position: absolute;
+    top: 0; height: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+    font-size: .65rem;
+    font-family: var(--display);
+    font-weight: 700;
+    color: #000;
+    overflow: hidden;
+    transition: filter .2s;
+    cursor: default;
+  }
+  .space-seg:hover { filter: brightness(1.2); z-index: 1; }
+  .map-legend { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: .7rem; color: var(--dim); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+  /* ─── TABLE ─── */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { width: 100%; border-collapse: collapse; min-width: 560px; }
+  thead tr { border-bottom: 2px solid var(--border); }
+  th {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: .75rem;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 10px 14px;
+    text-align: left;
+    white-space: nowrap;
+  }
+  td { padding: 12px 14px; border-bottom: 1px solid #111e36; font-size: .82rem; vertical-align: middle; }
+  tr:hover td { background: rgba(255,255,255,.02); }
+  .tag {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: .75rem;
+    margin-bottom: 4px;
+  }
+  .name-cell { font-weight: 700; color: #fff; font-size: .88rem; }
+  .addr { color: var(--cyan); font-size: .8rem; }
+  .mask-bits { color: var(--dim); font-size: .75rem; margin-top: 3px; }
+  .range-cell { font-size: .78rem; color: var(--text); }
+  .bc-cell { color: var(--red); font-size: .8rem; }
+  .hosts-cell { color: var(--green); font-weight: 700; }
+
+  /* ─── STEPS EXPLANATION ─── */
+  .steps-grid { display: flex; flex-direction: column; gap: 14px; }
+  .step-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--cyan);
+    border-radius: 0 8px 8px 0;
+    padding: 16px 18px;
+    animation: fadeUp .4s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .step-card h4 {
+    font-family: var(--display);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .step-num {
+    background: var(--cyan);
+    color: #000;
+    font-size: .7rem;
+    font-weight: 900;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--display);
+  }
+  .step-card p { font-size: .82rem; color: var(--text); line-height: 1.7; margin-bottom: 6px; }
+  .step-card p:last-child { margin-bottom: 0; }
+  .mono { font-family: var(--mono); background: rgba(0,229,255,.08); border: 1px solid rgba(0,229,255,.15); color: var(--cyan); padding: 2px 7px; border-radius: 4px; font-size: .8rem; }
+  .hl { color: var(--green); font-weight: 700; }
+  .hl-y { color: var(--yellow); font-weight: 700; }
+
+  /* ─── BINARY MASK ─── */
+  .bin-mask {
+    font-family: var(--mono);
+    font-size: .72rem;
+    color: var(--dim);
+    letter-spacing: 1px;
+    margin-top: 6px;
+    word-break: break-all;
+  }
+  .bin-mask .b1 { color: var(--cyan); }
+  .bin-mask .b0 { color: #2a3f5f; }
+
+  /* ─── ALERT ─── */
+  .alert {
+    background: rgba(255,79,94,.08);
+    border: 1px solid rgba(255,79,94,.3);
+    color: var(--red);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: .82rem;
+    margin-bottom: 14px;
+    display: none;
+  }
+  .alert.show { display: block; }
+
+  /* ─── EMPTY STATE ─── */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--dim);
+  }
+  .empty-state .icon { font-size: 3rem; opacity: .3; margin-bottom: 14px; }
+  .empty-state p { font-family: var(--display); font-size: 1rem; letter-spacing: 1px; }
+
+  /* ─── SCROLLBAR ─── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--dim); }
+
+  /* ─── RESULT HIDDEN ─── */
+  .hidden { display: none !important; }
+
+  /* ─── TOOLTIP ─── */
+  [data-tip] { position: relative; }
+  [data-tip]::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e3357;
+    color: var(--text);
+    font-size: .7rem;
+    padding: 4px 10px;
+    border-radius: 5px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .2s;
+    z-index: 10;
+  }
+  [data-tip]:hover::after { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo-icon">🌐</div>
+    <div class="header-title">
+      <h1>VLSM Pro</h1>
+      <p>Variable Length Subnet Mask Calculator</p>
+    </div>
+    <span class="badge">Versión 2.0</span>
+  </div>
+</header>
+
+<div class="main">
+  <div class="grid-2">
+
+    <!-- ─── LEFT: CONFIGURACIÓN ─── -->
+    <div class="left-col">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="dot dot-cyan"></span>
+          <h3>Red Base</h3>
+        </div>
+        <div class="panel-body">
+          <div class="field-row">
+            <div class="field">
+              <label>Dirección IP</label>
+              <input type="text" id="baseIp" value="192.168.1.0" placeholder="192.168.0.0">
+            </div>
+            <div class="field">
+              <label>Prefijo</label>
+              <input type="number" id="baseCidr" value="24" min="1" max="30">
+            </div>
+          </div>
+          <div id="alert-box" class="alert">⚠ &nbsp;<span id="alert-msg"></span></div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:16px">
+        <div class="panel-header">
+          <span class="dot dot-green"></span>
+          <h3>Subredes</h3>
+        </div>
+        <div class="panel-body">
+          <div id="subnets-list"></div>
+          <button class="btn btn-add" onclick="addRow()">
+            <span>＋</span> Añadir Subred
+          </button>
+          <button class="btn btn-primary" onclick="solve()" style="margin-top:12px">
+            ▶ &nbsp; Calcular VLSM
+          </button>
+        </div>
+      </div>
+
+      <!-- Info rápida -->
+      <div class="panel" style="margin-top:16px">
+        <div class="panel-header">
+          <span class="dot dot-yellow"></span>
+          <h3>Referencia Rápida</h3>
+        </div>
+        <div class="panel-body">
+          <table style="min-width:0;font-size:.75rem">
+            <thead>
+              <tr>
+                <th>Hosts</th><th>Bits (n)</th><th>Total IPs</th><th>Prefijo</th>
+              </tr>
+            </thead>
+            <tbody id="ref-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── RIGHT: RESULTADOS ─── -->
+    <div class="right-col" id="right-col">
+      <div class="empty-state" id="empty-state">
+        <div class="icon">⬡</div>
+        <p>Configura la red y calcula</p>
+      </div>
+
+      <!-- Stats -->
+      <div class="hidden" id="stats-section">
+        <div class="stats-row" id="stats-row"></div>
+      </div>
+
+      <!-- Mapa visual -->
+      <div class="panel hidden" id="map-panel">
+        <div class="panel-header">
+          <span class="dot dot-cyan"></span>
+          <h3>Mapa de Espacio IP</h3>
+        </div>
+        <div class="panel-body space-map">
+          <div class="space-track" id="space-track"></div>
+          <div class="map-legend" id="map-legend"></div>
+        </div>
+      </div>
+
+      <!-- Tabla de resultados -->
+      <div class="panel hidden" id="table-panel">
+        <div class="panel-header" style="justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="dot dot-green"></span>
+            <h3>Tabla de Direccionamiento</h3>
+          </div>
+          <button class="btn btn-export" onclick="exportCSV()">⬇ CSV</button>
+        </div>
+        <div class="panel-body" style="padding:0">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Red / Subred</th>
+                  <th>Máscara</th>
+                  <th>Rango Usable</th>
+                  <th>Broadcast</th>
+                  <th>Hosts</th>
+                </tr>
+              </thead>
+              <tbody id="results-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Explicación paso a paso -->
+      <div class="panel hidden" id="steps-panel">
+        <div class="panel-header">
+          <span class="dot dot-yellow"></span>
+          <h3>Procedimiento Paso a Paso</h3>
+        </div>
+        <div class="panel-body">
+          <div class="steps-grid" id="steps-grid"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── COLORES PARA SUBREDES ───
+const SEG_COLORS = [
+  '#00e5ff','#00ffa3','#ffd600','#ff6b9d','#a78bfa',
+  '#fb923c','#34d399','#f87171','#60a5fa','#facc15'
+];
+
+// ─── REFERENCIA RÁPIDA ───
+function buildRefTable() {
+  const tb = document.getElementById('ref-table');
+  const rows = [[2,1,4,31],[6,2,8,30],[14,3,16,29],[30,4,32,28],
+                [62,5,64,27],[126,6,128,26],[254,7,256,25],[510,8,512,24]];
+  tb.innerHTML = rows.map(([h,n,t,p]) =>
+    `<tr><td>${h}</td><td>2^${n}</td><td>${t}</td><td>/${p}</td></tr>`
+  ).join('');
+}
+buildRefTable();
+
+// ─── MANEJO DE FILAS ───
+let rowCount = 0;
+const defaultSubnets = [
+  {name:'Ventas',hosts:50},
+  {name:'IT',hosts:25},
+  {name:'Invitados',hosts:10}
+];
+defaultSubnets.forEach(s => addRow(s.name, s.hosts));
+
+function addRow(name='Nueva Subred', hosts=10) {
+  rowCount++;
+  const id = `row-${rowCount}`;
+  const color = SEG_COLORS[(rowCount-1) % SEG_COLORS.length];
+  const div = document.createElement('div');
+  div.className = 'subnet-row';
+  div.id = id;
+  div.innerHTML = `
+    <div>
+      <div class="row-label">Nombre</div>
+      <input type="text" class="s-name" value="${name}" style="border-bottom:2px solid ${color}">
+    </div>
+    <div>
+      <div class="row-label">Hosts</div>
+      <input type="number" class="s-hosts" value="${hosts}" min="1" max="65534">
+    </div>
+    <button class="del-btn" onclick="document.getElementById('${id}').remove()" title="Eliminar">✕</button>
+  `;
+  document.getElementById('subnets-list').appendChild(div);
+}
+
+// ─── IP UTILS ───
+function ipToLong(ip) {
+  return ip.split('.').reduce((a,o) => (a<<8)+parseInt(o,10), 0) >>> 0;
+}
+function longToIp(l) {
+  return [(l>>>24)&0xFF,(l>>>16)&0xFF,(l>>>8)&0xFF,l&0xFF].join('.');
+}
+function longToMask(cidr) {
+  const m = cidr===0 ? 0 : (0xFFFFFFFF << (32-cidr)) >>> 0;
+  return longToIp(m);
+}
+function cidrToBin(cidr) {
+  let s = '';
+  for(let i=0;i<32;i++){
+    if(i>0 && i%8===0) s += ' ';
+    s += i<cidr ? '<span class="b1">1</span>' : '<span class="b0">0</span>';
+  }
+  return s;
+}
+function validateIp(ip) {
+  return /^(\d{1,3}\.){3}\d{1,3}$/.test(ip) &&
+    ip.split('.').every(o => parseInt(o) >= 0 && parseInt(o) <= 255);
+}
+
+// ─── COPY HELPER ───
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'copiar'; btn.classList.remove('copied'); }, 1500);
+  });
+}
+
+// ─── ALERT ───
+function showAlert(msg) {
+  const box = document.getElementById('alert-box');
+  document.getElementById('alert-msg').textContent = msg;
+  box.classList.add('show');
+}
+function hideAlert() {
+  document.getElementById('alert-box').classList.remove('show');
+}
+
+// ─── MAIN SOLVE ───
+function solve() {
+  hideAlert();
+
+  const baseIpStr = document.getElementById('baseIp').value.trim();
+  const baseCidr = parseInt(document.getElementById('baseCidr').value);
+
+  if (!validateIp(baseIpStr)) { showAlert('IP de red inválida.'); return; }
+  if (isNaN(baseCidr) || baseCidr<1 || baseCidr>30) { showAlert('Prefijo debe estar entre 1 y 30.'); return; }
+
+  const rows = document.querySelectorAll('.subnet-row');
+  if (rows.length === 0) { showAlert('Añade al menos una subred.'); return; }
+
+  let subnets = Array.from(rows).map(r => ({
+    name: r.querySelector('.s-name').value || 'Subred',
+    hosts: parseInt(r.querySelector('.s-hosts').value)
+  })).filter(s => !isNaN(s.hosts) && s.hosts > 0);
+
+  if (subnets.length === 0) { showAlert('Verifica los valores de hosts.'); return; }
+
+  // Ordenar de mayor a menor (VLSM)
+  subnets = subnets.slice().sort((a,b) => b.hosts - a.hosts);
+
+  const baseNetSize = Math.pow(2, 32 - baseCidr);
+  let currentIpLong = ipToLong(baseIpStr);
+  const baseEnd = currentIpLong + baseNetSize;
+
+  const results = [];
+  let overflow = false;
+
+  subnets.forEach((s, i) => {
+    const totalNeeded = s.hosts + 2;
+    const n = Math.ceil(Math.log2(Math.max(totalNeeded, 2)));
+    const newCidr = 32 - n;
+    const totalIps = Math.pow(2, n);
+
+    if (currentIpLong + totalIps > baseEnd) { overflow = true; }
+
+    results.push({
+      name: s.name,
+      hosts: s.hosts,
+      n,
+      newCidr,
+      totalIps,
+      netAddr:     longToIp(currentIpLong),
+      netAddrLong: currentIpLong,
+      firstUsable: longToIp(currentIpLong + 1),
+      lastUsable:  longToIp(currentIpLong + totalIps - 2),
+      broadcast:   longToIp(currentIpLong + totalIps - 1),
+      mask:        longToMask(newCidr),
+      color:       SEG_COLORS[i % SEG_COLORS.length],
+      pct:         (totalIps / baseNetSize) * 100
+    });
+
+    currentIpLong += totalIps;
+  });
+
+  if (overflow) {
+    showAlert('Advertencia: las subredes superan el espacio de la red base. Revisa el prefijo o los hosts.');
+  }
+
+  renderStats(results, baseNetSize);
+  renderMap(results, baseNetSize);
+  renderTable(results);
+  renderSteps(results, baseIpStr, baseCidr);
+
+  // Mostrar secciones
+  document.getElementById('empty-state').classList.add('hidden');
+  ['stats-section','map-panel','table-panel','steps-panel'].forEach(id => {
+    document.getElementById(id).classList.remove('hidden');
+  });
+
+  document.getElementById('right-col').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ─── ESTADÍSTICAS ───
+function renderStats(results, baseNetSize) {
+  const totalUsed = results.reduce((s,r) => s+r.totalIps, 0);
+  const pct = Math.round((totalUsed/baseNetSize)*100);
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-box" data-tip="IPs asignadas">
+      <div class="stat-val">${totalUsed}</div>
+      <div class="stat-lbl">IPs Usadas</div>
+    </div>
+    <div class="stat-box" data-tip="IPs libres en la red">
+      <div class="stat-val" style="color:var(--green)">${baseNetSize - totalUsed}</div>
+      <div class="stat-lbl">IPs Libres</div>
+    </div>
+    <div class="stat-box" data-tip="Porcentaje del espacio ocupado">
+      <div class="stat-val" style="color:${pct>90?'var(--red)':pct>70?'var(--yellow)':'var(--cyan)'}">${pct}%</div>
+      <div class="stat-lbl">Ocupación</div>
+    </div>
+  `;
+}
+
+// ─── MAPA DE ESPACIO ───
+function renderMap(results, baseNetSize) {
+  const track = document.getElementById('space-track');
+  const legend = document.getElementById('map-legend');
+  let html = '', legendHtml = '', offset = 0;
+
+  results.forEach(r => {
+    const w = (r.totalIps / baseNetSize * 100).toFixed(2);
+    html += `<div class="space-seg" style="left:${offset}%;width:${w}%;background:${r.color}" title="${r.name}: ${r.netAddr}/${r.newCidr}">${parseFloat(w)>5?r.name:''}</div>`;
+    legendHtml += `<div class="legend-item"><div class="legend-dot" style="background:${r.color}"></div>${r.name} (${r.totalIps} IPs)</div>`;
+    offset += parseFloat(w);
+  });
+
+  const freeW = (100 - offset).toFixed(2);
+  if (parseFloat(freeW) > 0.5) {
+    html += `<div class="space-seg" style="left:${offset}%;width:${freeW}%;background:#1e3357;color:var(--dim);">${parseFloat(freeW)>8?'Libre':''}</div>`;
+    legendHtml += `<div class="legend-item"><div class="legend-dot" style="background:#1e3357;border:1px solid var(--dim)"></div>Libre</div>`;
+  }
+
+  track.innerHTML = html;
+  legend.innerHTML = legendHtml;
+}
+
+// ─── TABLA DE RESULTADOS ───
+function renderTable(results) {
+  const tbody = document.getElementById('results-body');
+  tbody.innerHTML = results.map((r, i) => `
+    <tr>
+      <td>
+        <span class="tag" style="background:${r.color}22;color:${r.color};border:1px solid ${r.color}44">VLAN ${10*(i+1)}</span>
+        <div class="name-cell">${r.name}</div>
+      </td>
+      <td>
+        <div class="addr">${r.netAddr}/<strong>${r.newCidr}</strong></div>
+        <div class="mask-bits">${r.mask}</div>
+        <div class="bin-mask">${cidrToBin(r.newCidr)}</div>
+      </td>
+      <td>
+        <div class="range-cell">${r.firstUsable}</div>
+        <div style="color:var(--dim);font-size:.7rem;margin:1px 0">—</div>
+        <div class="range-cell">${r.lastUsable}</div>
+        <button class="btn-copy" onclick="copyText('${r.firstUsable} - ${r.lastUsable}',this)">copiar</button>
+      </td>
+      <td>
+        <div class="bc-cell">${r.broadcast}</div>
+        <button class="btn-copy" onclick="copyText('${r.broadcast}',this)">copiar</button>
+      </td>
+      <td>
+        <div class="hosts-cell">${r.totalIps - 2}</div>
+        <div style="color:var(--dim);font-size:.7rem">${r.hosts} req.</div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ─── PASOS EXPLICATIVOS ───
+function renderSteps(results, baseIp, baseCidr) {
+  const grid = document.getElementById('steps-grid');
+  let html = `
+    <div class="step-card" style="border-left-color:var(--green);animation-delay:.05s">
+      <h4><span class="step-num" style="background:var(--green)">0</span>Principio VLSM</h4>
+      <p>VLSM (Variable Length Subnet Mask) asigna subredes <span class="hl">de mayor a menor</span> para minimizar el desperdicio de IPs.</p>
+      <p>Red base: <span class="mono">${baseIp}/${baseCidr}</span> — Espacio total: <span class="hl">${Math.pow(2,32-baseCidr)} IPs</span></p>
+    </div>
+  `;
+  results.forEach((r, i) => {
+    const prev = i === 0 ? 1 : 2;
+    html += `
+      <div class="step-card" style="animation-delay:${(i+1)*0.08}s">
+        <h4>
+          <span class="step-num">${i+1}</span>
+          <span style="color:${r.color}">${r.name}</span>
+          <span style="font-size:.8rem;color:var(--dim);margin-left:4px">— ${r.hosts} hosts requeridos</span>
+        </h4>
+        <p><strong>Paso 1 — Calcular IPs necesarias:</strong>
+          <span class="mono">${r.hosts} hosts + 1 red + 1 broadcast = <span class="hl">${r.hosts+2} IPs</span></span>
+        </p>
+        <p><strong>Paso 2 — Buscar potencia de 2:</strong>
+          2^${r.n-1} = ${Math.pow(2,r.n-1)} <span style="color:var(--red)">✗ insuficiente</span> &nbsp;→&nbsp;
+          <span class="mono">2^${r.n} = <span class="hl">${r.totalIps}</span></span> <span style="color:var(--green)">✓</span>
+        </p>
+        <p><strong>Paso 3 — Calcular prefijo:</strong>
+          <span class="mono">32 − ${r.n} = <span class="hl">/${r.newCidr}</span></span>
+          &nbsp;→ Máscara: <span class="mono">${r.mask}</span>
+        </p>
+        <p><strong>Paso 4 — Asignar rango</strong> (inicio en <span class="mono">${r.netAddr}</span>):</p>
+        <p>
+          🔷 Red: <span class="mono" style="color:var(--dim)">${r.netAddr}</span> &nbsp;
+          🟢 Primer host: <span class="mono">${r.firstUsable}</span> &nbsp;
+          🟢 Último host: <span class="mono">${r.lastUsable}</span> &nbsp;
+          🔴 Broadcast: <span class="mono" style="color:var(--red)">${r.broadcast}</span>
+        </p>
+      </div>
+    `;
+  });
+  grid.innerHTML = html;
+}
+
+// ─── EXPORTAR CSV ───
+function exportCSV() {
+  const rows = document.querySelectorAll('#results-body tr');
+  let csv = 'VLAN,Nombre,Red/Prefijo,Máscara,Primer Host,Último Host,Broadcast,Hosts Usables\n';
+  rows.forEach((tr, i) => {
+    const tds = tr.querySelectorAll('td');
+    const vlan = `VLAN ${10*(i+1)}`;
+    const name = tds[0].querySelector('.name-cell').textContent.trim();
+    const addrEl = tds[1].querySelector('.addr');
+    const net = addrEl.childNodes[0].textContent.trim() + '/' + addrEl.querySelector('strong').textContent.trim();
+    const mask = tds[1].querySelector('.mask-bits').textContent.trim();
+    const range = tds[2].querySelectorAll('.range-cell');
+    const first = range[0]?.textContent.trim() || '';
+    const last  = range[1]?.textContent.trim() || '';
+    const bc    = tds[3].querySelector('.bc-cell').textContent.trim();
+    const hosts = tds[4].querySelector('.hosts-cell').textContent.trim();
+    csv += `${vlan},${name},${net},${mask},${first},${last},${bc},${hosts}\n`;
+  });
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'vlsm_resultado.csv';
+  a.click();
+}
+</script>
+</body>
+</html>
