@@ -1,0 +1,10 @@
+{
+  "categoria": "Redes",
+  "icono": "🌐",
+  "etiquetas": ["subnetting", "redes", "calculadora", "ASIR"],
+  "descripcion": "Herramienta para calcular y practicar subnetting en redes informáticas.",
+  "demo": "",
+  "destacado": true,
+  "orden": 4,
+  "ocultar": false
+}
